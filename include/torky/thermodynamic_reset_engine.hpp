@@ -3,32 +3,32 @@
 
 #include <cmath>
 #include <cstdint>
-#include <algorithm>
 
-namespace torky::thermodynamic::reset {
-    inline constexpr double EPSILON_NM2       = 0.016;
-    inline constexpr double V_FINITE_ZERO_EV  = 11.384;
+namespace torky::thermo::reset {
+    inline constexpr double V_FINITE_ZERO_EV = 11.384;
+    inline constexpr double BANACH_CONTRACT  = 0.3849;
 
     #pragma pack(push, 1)
     struct TorkyCellDtype {
-        uint8_t  gov_gate;     // TSG Gate Register (0x01 - 0x04)
-        int16_t  phase_q16;    // Phase Q16 Fixed-Point
-        int16_t  field_q16;    // Field Q16 Fixed-Point
-        uint32_t syndrome_u32; // SHA-256 Merkle Syndrome
+        uint64_t entropy_state;
+        uint8_t tsg_gate_register; // 0x01 PROCEED, 0x02 HOLD, 0x03 DENY, 0x04 ESCALATE
     };
     #pragma pack(pop)
 
-    static_assert(sizeof(TorkyCellDtype) == 9, "CRITICAL: TorkyCellDtype must be precisely 9 bytes!");
+    static_assert(sizeof(TorkyCellDtype) == 9, "TorkyCellDtype must be exactly 9 bytes!");
 
     class ThermodynamicResetEngine {
     public:
-        // Counterdiabatic driving bypassing Landauer's bound with zero-entropy heat extraction
-        static inline double evaluate_counterdiabatic_reset(double temperature_k, double control_field) {
-            double landauer_bypass = 1.0 / std::sqrt((control_field * control_field) + EPSILON_NM2);
-            return temperature_k * landauer_bypass * 0.01;
+        static double compute_zero_entropy_power(double thz_freq) {
+            double power = V_FINITE_ZERO_EV * thz_freq * (1.0 - BANACH_CONTRACT);
+            return std::isfinite(power) ? power : 0.0;
         }
-        static inline double evaluate_v_finite(double r_nm) {
-            return 1.0 / std::sqrt((r_nm * r_nm) + EPSILON_NM2);
+
+        static TorkyCellDtype execute_reset(TorkyCellDtype cell, double freq) {
+            cell.tsg_gate_register = 0x01; // PROCEED
+            double p = compute_zero_entropy_power(freq);
+            cell.entropy_state ^= static_cast<uint64_t>(p);
+            return cell;
         }
     };
 }

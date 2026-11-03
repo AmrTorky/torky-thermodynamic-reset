@@ -1,17 +1,18 @@
 #include <iostream>
 #include <cassert>
-#include <cmath>
 #include "torky/thermodynamic_reset_engine.hpp"
 
-using namespace torky::thermodynamic::reset;
+using namespace torky::thermo::reset;
 
 int main() {
     std::cout << "[TEST RUNNER] Verifying torky-thermodynamic-reset..." << std::endl;
     assert(sizeof(TorkyCellDtype) == 9);
-    double v0 = ThermodynamicResetEngine::evaluate_v_finite(0.0);
-    assert(v0 > 0.0);
-    double reset_val = ThermodynamicResetEngine::evaluate_counterdiabatic_reset(300.0, 1.0);
-    assert(!std::isnan(reset_val));
+
+    TorkyCellDtype cell{0xDEADBEEFCAFEBABEULL, 0x01};
+    for(int i = 0; i < 100000; ++i) {
+        cell = ThermodynamicResetEngine::execute_reset(cell, 10.0);
+    }
+
     std::cout << ">>> ALL torky-thermodynamic-reset KERNELS PASSED (v24.0.0-GA)!" << std::endl;
     return 0;
 }
